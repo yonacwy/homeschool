@@ -15,7 +15,7 @@ import {
 
 import { getUser } from "~/session.server";
 import stylesheet from "~/tailwind.css";
-import React, { useState } from 'react'; // Import React and useState
+import React, { useState } from 'react';
 
 export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
@@ -27,7 +27,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function App() {
-  const [drawerOpen, setDrawerOpen] = useState(false); // State for drawer
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [profilePopupOpen, setProfilePopupOpen] = useState(false);
   const data = useLoaderData<typeof loader>();
   const user = data.user;
 
@@ -40,7 +41,7 @@ export default function App() {
         <Links />
       </head>
       <body className="h-full">
-        <header className="flex items-center justify-between bg-slate-800 p-4 text-white">
+        <header className="flex items-center justify-between bg-slate-800 p-4 text-white relative">
           <div className="flex items-center">
             <button onClick={() => setDrawerOpen(!drawerOpen)} className="text-white hover:text-gray-300 focus:outline-none mr-4">
               <svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
@@ -51,18 +52,48 @@ export default function App() {
               <Link to="/">Home</Link>
             </h1>
           </div>
-          <div className="flex items-center">
-            <p className="mr-4">{user?.email}</p>
-            <Form action="/logout" method="post">
-              <button
-                type="submit"
-                className="rounded bg-slate-600 px-4 py-2 text-blue-100 hover:bg-blue-500 active:bg-blue-600"
-              >
-                Logout
-              </button>
-            </Form>
+          <div className="relative">
+            <button 
+              onClick={() => setProfilePopupOpen(!profilePopupOpen)}
+              className="text-white hover:text-gray-300 focus:outline-none"
+            >
+              <svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+              </svg>
+            </button>
+
+            {profilePopupOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+                <div className="px-4 py-2 text-sm text-gray-700">
+                  Signed in as: {user?.email}
+                </div>
+                <Link 
+                  to="/profile"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => setProfilePopupOpen(false)}
+                >
+                  Profile
+                </Link>
+                <Link 
+                  to="/settings"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => setProfilePopupOpen(false)}
+                >
+                  Settings
+                </Link>
+                <Form action="/logout" method="post" className="mt-2">
+                  <button
+                    type="submit"
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </Form>
+              </div>
+            )}
           </div>
         </header>
+
         <div className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md p-4 ${drawerOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 z-50`}>
           <button onClick={() => setDrawerOpen(false)} className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 focus:outline-none">
             <svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
@@ -76,6 +107,7 @@ export default function App() {
             <li className="mb-2"><Link to="/notes" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>Notes</Link></li>
           </ul>
         </div>
+
         <div className="ml-0 transition-margin duration-300" style={{ marginLeft: drawerOpen ? '64px' : '0' }}>
           <Outlet />
           <ScrollRestoration />
