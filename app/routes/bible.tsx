@@ -3,17 +3,32 @@ import { json } from "@remix-run/node";
 import { Form, Link, NavLink, Outlet, useLoaderData } from "@remix-run/react";
 import { requireUserId } from "~/session.server";
 import { useUser } from "~/utils";
+import { getBibleData } from "~/models/bible.server";
 import React, { useState } from 'react';
+
+// Define types for Bible data
+interface BibleData {
+  books: Record<string, number>; // Book name to number of chapters
+  kjv: Record<string, Record<string, string>>; // Book to chapter to text
+}
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const userId = await requireUserId(request);
-  return json({ userId });
+  const bibleData = await getBibleData();
+  return json({ userId, bibleData });
 };
 
 export default function BiblePage() {
-  const data = useLoaderData<typeof loader>();
+  const { bibleData } = useLoaderData<typeof loader>();
   const user = useUser();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [selectedBook, setSelectedBook] = useState<string>(Object.keys(bibleData.books)[0] || ""); // Default to first book, ensure string
+  const [selectedChapter, setSelectedChapter] = useState<string>("1"); // Default to chapter 1, ensure string
+
+  const books = Object.keys(bibleData.books) as string[];
+  const chapters = Array.from({ length: bibleData.books[selectedBook] || 0 }, (_, i) => (i + 1).toString());
+
+  const bibleText: string = bibleData.kjv[selectedBook]?.[selectedChapter] || "Select a book and chapter to view text.";
 
   return (
     <div className="flex h-full min-h-screen flex-col">
@@ -38,31 +53,28 @@ export default function BiblePage() {
           transition-transform duration-300 ease-in-out z-40
           h-full
         `} style={{ top: '64px', boxShadow: '-2px 0 5px rgba(0, 0, 0, 0.1)' }}>
-          <div className="h-full w-full overflow-y-auto">
-            <hr />
+          <div className="h-full w-full overflow-y-auto p-4">
+            {/* Book Selector */}
+            <select 
+              value={selectedBook} 
+              onChange={(e) => setSelectedBook(e.target.value)} 
+              className="w-full p-2 mb-4 border rounded"
+            >
+              {books.map((book) => (
+                <option key={book} value={book}>{book}</option>
+              ))}
+            </select>
 
-            <ol>
-              <li>
-                <NavLink
-                  className={({ isActive }) =>
-                    `block border-b p-4 text-xl ${isActive ? "bg-white border-r-4 border-blue-500" : ""}`
-                  }
-                  to="old-testament"
-                >
-                  📖 Old Testament
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  className={({ isActive }) =>
-                    `block border-b p-4 text-xl ${isActive ? "bg-white border-r-4 border-blue-500" : ""}`
-                  }
-                  to="new-testament"
-                >
-                  📖 New Testament
-                </NavLink>
-              </li>
-            </ol>
+            {/* Chapter Selector */}
+            <select 
+              value={selectedChapter} 
+              onChange={(e) => setSelectedChapter(e.target.value)} 
+              className="w-full p-2 mb-4 border rounded"
+            >
+              {chapters.map((chapter) => (
+                <option key={chapter} value={chapter}>Chapter {chapter}</option>
+              ))}
+            </select>
           </div>
 
           {/* Close button for mobile sidebar - now on the right when sidebar is open */}
@@ -86,9 +98,14 @@ export default function BiblePage() {
           ></div>
         )}
 
-        {/* Main content area - adjusts for sidebar width on desktop, now on the left */}
+        {/* Main content area - adjusts for sidebar width on desktop, now on the left, displays Bible text */}
         <div className="flex-1 p-6" style={{ marginRight: '320px', transition: 'margin-right 300ms ease-in-out' }}>
-          <Outlet />
+          <h1 className="text-2xl font-bold mb-4">{selectedBook} Chapter {selectedChapter}</h1>
+          <div className="prose max-w-none">
+            {bibleText.split('\n').map((line: string, index: number) => ( // Explicitly type line and index
+              <p key={index}>{line}</p>
+            ))}
+          </div>
         </div>
       </main>
     </div>
