@@ -41,7 +41,7 @@ export default function App() {
         <Links />
       </head>
       <body className="h-full">
-        <header className="flex items-center justify-between bg-slate-800 p-4 text-white relative">
+        <header className="fixed top-0 left-0 right-0 flex items-center justify-between bg-slate-800 p-4 text-white z-50 shadow-md">
           <div className="flex items-center">
             <button onClick={() => setDrawerOpen(!drawerOpen)} className="text-white hover:text-gray-300 focus:outline-none mr-4">
               <svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
@@ -63,7 +63,7 @@ export default function App() {
             </button>
 
             {profilePopupOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-60">
                 <div className="px-4 py-2 text-sm text-gray-700">
                   Signed in as: {user?.email}
                 </div>
@@ -94,7 +94,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md p-4 ${drawerOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 z-50`}>
+        <div className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md p-4 ${drawerOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 z-40`} style={{ marginTop: '64px' }}>
           <button onClick={() => setDrawerOpen(false)} className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 focus:outline-none">
             <svg className="h-6 w-6 fill-current" viewBox="0 0 24 24">
               <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -108,7 +108,7 @@ export default function App() {
           </ul>
         </div>
 
-        <div className="ml-0 transition-margin duration-300" style={{ marginLeft: drawerOpen ? '64px' : '0' }}>
+        <div className="ml-0 transition-margin duration-300" style={{ marginLeft: drawerOpen ? '64px' : '0', marginTop: '64px' }}>
           <Outlet />
           <ScrollRestoration />
           <Scripts />
