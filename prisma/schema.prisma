@@ -8,47 +8,49 @@ generator client {
 }
 
 model User {
-  id    String @id @default(cuid())
-  email String @unique
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  password Password?
-  notes    Note[]
-  courses  Course[]
+  id         String        @id @default(cuid())
+  email      String        @unique
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  password   Password?
+  notes      Note[]
+  courses    Course[]
+  readings   BibleReading[] // Add relation to BibleReading
 }
 
 model Password {
-  hash String
-
+  hash   String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId String @unique
 }
 
 model Note {
-  id    String @id @default(cuid())
-  title String
-  body  String
-
+  id        String   @id @default(cuid())
+  title     String
+  body      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId    String
 }
 
-
 model Course {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
   description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId      String
+  @@unique([id, userId], map: "id_userId")
+}
 
+model BibleReading {
+  id        String   @id @default(cuid())
+  book      String
+  chapter   String
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String
-
-  @@unique([id, userId], map: "id_userId") // Matches the where clause in update/delete
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId    String
+  @@index([userId, createdAt]) // Index for faster queries by user and timestamp
 }
