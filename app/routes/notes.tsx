@@ -15,81 +15,41 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function NotesPage() {
   const data = useLoaderData<typeof loader>();
   const user = useUser();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="flex h-full min-h-screen flex-col">
       {/* Main container with padding-top to account for header */}
-      <main className="flex-1 flex flex-col md:flex-row-reverse h-full bg-white" style={{ paddingTop: '64px' }}>
-        {/* Hamburger menu button for mobile only, positioned below header on the right, hides when sidebar is open */}
-        {!isSidebarOpen && (
-          <button 
-            onClick={() => setIsSidebarOpen(true)}
-            className="md:hidden fixed top-16 right-4 z-50 p-4 text-blue-500 focus:outline-none"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
-            </svg>
-          </button>
-        )}
+      <main className="flex-1 flex flex-col h-full bg-white" style={{ paddingTop: '64px' }}>
+        {/* Picker container fixed below header, ensuring it doesn't overlap nav drawer */}
+        <div className="fixed top-16 left-0 right-0 bg-white shadow-md z-30 p-4 border-b" style={{ zIndex: 30 }}>
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
+            {/* Note List Dropdown (Picker) */}
+            <select 
+              className="w-full md:w-auto p-2 border rounded"
+              onChange={(e) => {
+                const noteId = e.target.value;
+                if (noteId) {
+                  window.location.href = `/notes/${noteId}`; // Navigate to the selected note
+                }
+              }}
+            >
+              <option value="">Select a Note</option>
+              {data.noteListItems.map((note) => (
+                <option key={note.id} value={note.id}>
+                  📝 {note.title}
+                </option>
+              ))}
+            </select>
 
-        {/* Sidebar for notes list - hidden on mobile by default, fixed width on desktop, now on the right */}
-        <div className={`
-          fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}
-          md:relative md:translate-x-0 md:flex md:w-80 md:border-l md:bg-gray-50 md:shadow
-          transition-transform duration-300 ease-in-out z-40
-          h-full
-        `} style={{ top: '64px', boxShadow: '-2px 0 5px rgba(0, 0, 0, 0.1)' }}>
-          <div className="h-full w-full overflow-y-auto">
-            <Link to="new" className="block p-4 text-xl text-black">
+            {/* New Note Link as a Button */}
+            <Link to="new" className="w-full md:w-auto p-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-center">
               + New Note
             </Link>
-
-            <hr />
-
-            {data.noteListItems.length === 0 ? (
-              <p className="p-4">No notes yet</p>
-            ) : (
-              <ol className="space-y-2">
-                {data.noteListItems.map((note) => (
-                  <li key={note.id}>
-                    <NavLink
-                      className={({ isActive }) =>
-                        `block p-3 text-lg hover:bg-gray-100 ${isActive ? "bg-white border-r-4 border-blue-500" : ""}`
-                      }
-                      to={note.id}
-                    >
-                      📝 {note.title}
-                    </NavLink>
-                  </li>
-                ))}
-              </ol>
-            )}
           </div>
-
-          {/* Close button for mobile sidebar - now on the right when sidebar is open */}
-          {isSidebarOpen && (
-            <button 
-              onClick={() => setIsSidebarOpen(false)}
-              className="md:hidden absolute top-4 right-4 text-gray-500 hover:text-gray-800 focus:outline-none"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
         </div>
 
-        {/* Overlay for mobile when sidebar is open - now covers left side */}
-        {isSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black opacity-50 md:hidden z-30"
-            onClick={() => setIsSidebarOpen(false)}
-          ></div>
-        )}
-
-        {/* Main content area - adjusts for sidebar width on desktop, now on the left */}
-        <div className="flex-1 p-4 md:p-6" style={{ marginRight: '320px', transition: 'margin-right 300ms ease-in-out' }}>
+        {/* Main content area - adjusts for picker height, displays notes */}
+        <div className="flex-1 p-4 md:p-6" style={{ paddingTop: '120px' }}> {/* Increased padding to account for picker */}
           <Outlet />
         </div>
       </main>
