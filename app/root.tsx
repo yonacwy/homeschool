@@ -14,6 +14,7 @@ import {
 } from "@remix-run/react";
 
 import { getUser } from "~/session.server";
+import { useUser } from "~/utils";
 import stylesheet from "~/tailwind.css";
 import React, { useState } from 'react';
 
@@ -30,7 +31,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profilePopupOpen, setProfilePopupOpen] = useState(false);
   const data = useLoaderData<typeof loader>();
-  const user = data.user;
+  const user = useUser();
 
   return (
     <html lang="en" className="h-full">
@@ -102,9 +103,10 @@ export default function App() {
           </button>
           <h2 className="font-bold mb-4">Navigation</h2>
           <ul>
-            <li className="mb-2"><Link to="/portal" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>Portal</Link></li>
-            <li className="mb-2"><Link to="/bible" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>Bible</Link></li>
-            <li className="mb-2"><Link to="/notes" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>Notes</Link></li>
+            <li className="mb-2"><Link to="/portal" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>🏠 Portal</Link></li>
+            <li className="mb-2"><Link to="/bible" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>📖 Bible</Link></li>
+            <li className="mb-2"><Link to="/courses" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>📚 Courses</Link></li>
+            <li className="mb-2"><Link to="/notes" className="block py-2 px-4 hover:bg-gray-100" onClick={() => setDrawerOpen(false)}>📝 Notes</Link></li>
           </ul>
         </div>
 
