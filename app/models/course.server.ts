@@ -1,4 +1,5 @@
 import { prisma } from "~/db.server";
+import type { Course } from "@prisma/client";
 
 export async function getCourseListItems({ userId }: { userId: string }) {
   return prisma.course.findMany({
@@ -22,16 +23,19 @@ export async function createCourse({
   title,
   description,
   userId,
+  structure,
 }: {
   title: string;
   description?: string;
   userId: string;
-}) {
+  structure?: string | null; // Explicitly define structure type as string or null
+}): Promise<Course> { // Explicitly define return type as Course
   return prisma.course.create({
     data: {
       title,
       description: description || "",
       userId,
+      structure, // Include structure in the data
     },
   });
 }
