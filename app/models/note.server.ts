@@ -1,3 +1,9 @@
+//Todo
+//Sanitization:
+//Quill outputs HTML, which is stored in the body field and rendered with dangerouslySetInnerHTML. To prevent XSS attacks, consider sanitizing the HTML //server-side or client-side:
+//Server-Side: Use a library like sanitize-html in note.server.ts before saving or retrieving body.
+//Client-Side: Sanitize before rendering with dangerouslySetInnerHTML.
+//Example with sanitize-html (install with npm install sanitize-html
 import type { User, Note } from "@prisma/client";
 import { prisma } from "~/db.server";
 
