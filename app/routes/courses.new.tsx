@@ -16,20 +16,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const title = formData.get("title") as string;
   const description = formData.get("description") as string | null;
-  const structure = JSON.parse(formData.get("structure") as string) || [];
-  console.log('Structure from form data:', structure);
-  
+  const structure = formData.get("structure") as string;
+
+  console.log('Received form data:', { title, description, structure });
+
   if (!title) {
     return json({ error: "Title is required" }, { status: 400 });
   }
 
   try {
-    console.log('Structure being passed to createCourse:', structure);
-    console.log('Structure being passed to createCourse:', structure);
-    await createCourse({ title, description: description || "", userId, structure });
+    const course = await createCourse({
+      title,
+      description: description || "",
+      userId,
+      structure: structure || null,
+    });
+    console.log('Course created successfully:', course);
     return redirect("/courses");
   } catch (error) {
-    return json({ error: "Failed to create course" }, { status: 500 });
+    console.error('Action error:', error);
+    return json({ error: (error as Error).message || "Failed to create course" }, { status: 500 });
   }
 };
 
@@ -37,6 +43,7 @@ type CourseItem = {
   id: string;
   content: string;
   type: 'topic' | 'lesson' | 'quiz';
+  questions?: { question: string; answer: string }[]; // For quizzes
 };
 
 export default function NewCoursePage() {
@@ -45,16 +52,48 @@ export default function NewCoursePage() {
   const [courseTitle, setCourseTitle] = useState('');
   const [courseDescription, setCourseDescription] = useState('');
   const [courseItems, setCourseItems] = useState<CourseItem[]>([]);
-  const [points, setPoints] = useState(0); // Gamification: Points for actions
+  const [points, setPoints] = useState(0);
 
   const addItem = (type: CourseItem['type']) => {
     const newItem: CourseItem = {
       id: `item-${Date.now()}`,
       content: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       type,
+      ...(type === 'quiz' && { questions: [] }), // Initialize questions for quizzes
     };
     setCourseItems([...courseItems, newItem]);
-    setPoints(points + 10); // Add points for creating new content
+    setPoints(points + 10);
+  };
+
+  const updateItemContent = (id: string, content: string) => {
+    setCourseItems(courseItems.map(item => 
+      item.id === id ? { ...item, content } : item
+    ));
+  };
+
+  const addQuestion = (quizId: string) => {
+    setCourseItems(courseItems.map(item => {
+      if (item.id === quizId && item.type === 'quiz') {
+        return {
+          ...item,
+          questions: [...(item.questions || []), { question: "New Question", answer: "" }],
+        };
+      }
+      return item;
+    }));
+    setPoints(points + 5);
+  };
+
+  const updateQuestion = (quizId: string, questionIdx: number, field: 'question' | 'answer', value: string) => {
+    setCourseItems(courseItems.map(item => {
+      if (item.id === quizId && item.type === 'quiz' && item.questions) {
+        const updatedQuestions = item.questions.map((q, idx) => 
+          idx === questionIdx ? { ...q, [field]: value } : q
+        );
+        return { ...item, questions: updatedQuestions };
+      }
+      return item;
+    }));
   };
 
   const onDragEnd = (result: any) => {
@@ -65,18 +104,13 @@ export default function NewCoursePage() {
     newItems.splice(result.destination.index, 0, reorderedItem);
 
     setCourseItems(newItems);
-    setPoints(points + 5); // Add points for reordering
+    setPoints(points + 5);
   };
 
   return (
     <div className="flex-1 p-6 bg-gray-100 min-h-screen">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Create New Course</h1>
-      <Form method="post" className="space-y-6 max-w-2xl bg-white p-6 rounded-lg shadow-md" onSubmit={() => {
-        const formData = new FormData();
-        formData.append('title', courseTitle);
-        formData.append('description', courseDescription);
-        formData.append('structure', JSON.stringify(courseItems));
-      }}>
+      <Form method="post" className="space-y-6 max-w-2xl bg-white p-6 rounded-lg shadow-md">
         <div>
           <label htmlFor="title" className="block text-lg font-medium text-gray-700 mb-2">
             Course Title
@@ -110,7 +144,7 @@ export default function NewCoursePage() {
 
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-700 mb-4">Course Structure</h2>
-          <div className="space-y-4">
+          <div className="space-x-4 mb-4">
             <button
               type="button"
               onClick={() => addItem('topic')}
@@ -121,14 +155,14 @@ export default function NewCoursePage() {
             <button
               type="button"
               onClick={() => addItem('lesson')}
-              className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 ml-2"
+              className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600"
             >
               Add Lesson
             </button>
             <button
               type="button"
               onClick={() => addItem('quiz')}
-              className="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600 ml-2"
+              className="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600"
             >
               Add Quiz
             </button>
@@ -149,16 +183,52 @@ export default function NewCoursePage() {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          className="p-4 bg-gray-200 rounded shadow-md flex justify-between items-center"
+                          className="p-4 bg-gray-200 rounded shadow-md space-y-2"
                         >
-                          <span>{item.content}</span>
-                          <button
-                            type="button"
-                            onClick={() => setCourseItems(courseItems.filter(i => i.id !== item.id))}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            Remove
-                          </button>
+                          <div className="flex justify-between items-center">
+                            <input
+                              type="text"
+                              value={item.content}
+                              onChange={(e) => updateItemContent(item.id, e.target.value)}
+                              className="flex-1 mr-2 rounded-md border-gray-300 shadow-sm p-2"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setCourseItems(courseItems.filter(i => i.id !== item.id))}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          {item.type === 'quiz' && (
+                            <div className="ml-4 space-y-2">
+                              {item.questions?.map((q, qIdx) => (
+                                <div key={qIdx} className="space-y-1">
+                                  <input
+                                    type="text"
+                                    value={q.question}
+                                    onChange={(e) => updateQuestion(item.id, qIdx, 'question', e.target.value)}
+                                    placeholder="Question"
+                                    className="w-full rounded-md border-gray-300 shadow-sm p-1"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={q.answer}
+                                    onChange={(e) => updateQuestion(item.id, qIdx, 'answer', e.target.value)}
+                                    placeholder="Answer"
+                                    className="w-full rounded-md border-gray-300 shadow-sm p-1"
+                                  />
+                                </div>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => addQuestion(item.id)}
+                                className="text-blue-500 hover:text-blue-700 text-sm"
+                              >
+                                Add Question
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </Draggable>
@@ -170,7 +240,12 @@ export default function NewCoursePage() {
           </DragDropContext>
         </div>
 
-        {/* Gamification Display */}
+        <input
+          type="hidden"
+          name="structure"
+          value={JSON.stringify(courseItems)}
+        />
+
         <div className="mt-6 p-4 bg-yellow-100 rounded-lg">
           <h3 className="text-lg font-semibold text-gray-800">Your Progress</h3>
           <p className="text-gray-700">Points: {points}</p>
