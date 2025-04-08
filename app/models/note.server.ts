@@ -55,7 +55,7 @@ export function updateNote({
 }: Pick<Note, "id" | "title" | "body"> & { userId: User["id"] }) {
   console.log("Updating note with id:", id, "title:", title, "body:", body, "userId:", userId);
   return prisma.note.update({
-    where: { id }, // Revert to original working state
+    where: { id }, // Works as per original setup
     data: {
       title,
       body,
