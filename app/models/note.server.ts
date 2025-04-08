@@ -1,15 +1,12 @@
 import type { User, Note } from "@prisma/client";
-
 import { prisma } from "~/db.server";
 
 export function getNote({
   id,
   userId,
-}: Pick<Note, "id"> & {
-  userId: User["id"];
-}) {
+}: Pick<Note, "id"> & { userId: User["id"] }) {
   return prisma.note.findFirst({
-    select: { id: true, body: true, title: true, userId: true },
+    select: { id: true, body: true, title: true },
     where: { id, userId },
   });
 }
@@ -17,7 +14,7 @@ export function getNote({
 export function getNoteListItems({ userId }: { userId: User["id"] }) {
   return prisma.note.findMany({
     where: { userId },
-    select: { id: true, title: true, updatedAt: true },
+    select: { id: true, title: true },
     orderBy: { updatedAt: "desc" },
   });
 }
@@ -26,16 +23,16 @@ export function createNote({
   body,
   title,
   userId,
-}: Pick<Note, "body" | "title"> & {
-  userId: User["id"];
-}) {
+}: Pick<Note, "body" | "title"> & { userId: User["id"] }) {
   return prisma.note.create({
     data: {
       title,
       body,
-      userId, // Directly set userId instead of using connect for simplicity
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
     },
   });
 }
@@ -44,12 +41,9 @@ export function deleteNote({
   id,
   userId,
 }: Pick<Note, "id"> & { userId: User["id"] }) {
-  console.log("Attempting to delete note with id:", id, "for user:", userId);
-  return prisma.note.delete({
-    where: { id, userId }, // Changed to delete for single record
-  }).catch((error) => {
-    console.error("Error deleting note:", error);
-    throw new Error("Failed to delete note: " + error.message);
+  console.log("Deleting note with id:", id, "for user:", userId);
+  return prisma.note.deleteMany({
+    where: { id, userId },
   });
 }
 
@@ -59,9 +53,9 @@ export function updateNote({
   body,
   userId,
 }: Pick<Note, "id" | "title" | "body"> & { userId: User["id"] }) {
-  console.log("Attempting to update note with id:", id, "for user:", userId, "title:", title, "body:", body);
+  console.log("Updating note with id:", id, "title:", title, "body:", body, "userId:", userId);
   return prisma.note.update({
-    where: { id, userId }, // Ensure user owns the note
+    where: { id }, // Revert to original working state
     data: {
       title,
       body,
