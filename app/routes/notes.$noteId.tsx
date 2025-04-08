@@ -11,12 +11,15 @@ import {
   useActionData,
 } from "@remix-run/react";
 import invariant from "tiny-invariant";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+// Lazy load React Quill only on the client
+const ReactQuill = typeof window !== "undefined" ? require("react-quill") : () => null;
+import "react-quill/dist/quill.snow.css";
 
 import { deleteNote, getNote, updateNote } from "~/models/note.server";
 import { requireUserId } from "~/session.server";
 
-// Define the possible return types for the action
 type ActionData =
   | { errors: { title?: string; body?: string; server?: string }; success?: never }
   | { success: boolean; errors?: never }
@@ -86,8 +89,13 @@ export default function NoteDetailsPage() {
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
   const [isEditing, setIsEditing] = useState(false);
+  const [bodyValue, setBodyValue] = useState(data.note.body);
+  const [isClient, setIsClient] = useState(false);
 
-  // Type guard to check if actionData has errors
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const hasErrors = actionData && "errors" in actionData;
 
   return (
@@ -120,14 +128,32 @@ export default function NoteDetailsPage() {
           <div>
             <label htmlFor="body" className="block text-lg font-medium text-gray-700 mb-2">
               Body
-              <textarea
-                id="body"
-                name="body"
-                defaultValue={data.note.body}
-                required
-                rows={6}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"
-              />
+              {isClient ? (
+                <ReactQuill
+                  value={bodyValue}
+                  onChange={setBodyValue}
+                  theme="snow"
+                  className="mt-1 block w-full rounded-md border-2 border-gray-300"
+                  modules={{
+                    toolbar: [
+                      [{ header: [1, 2, false] }],
+                      ["bold", "italic", "underline", "strike"],
+                      [{ list: "ordered" }, { list: "bullet" }],
+                      ["link", "image"],
+                      ["clean"],
+                    ],
+                  }}
+                />
+              ) : (
+                <textarea
+                  name="body"
+                  defaultValue={data.note.body}
+                  rows={6}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-2"
+                  onChange={(e) => setBodyValue(e.target.value)}
+                />
+              )}
+              <input type="hidden" name="body" value={bodyValue} />
             </label>
             {hasErrors && actionData.errors.body && (
               <p className="text-red-500 text-sm mt-1">{actionData.errors.body}</p>
@@ -156,7 +182,10 @@ export default function NoteDetailsPage() {
       ) : (
         <>
           <h3 className="text-3xl font-bold mb-4 text-gray-800">{data.note.title}</h3>
-          <p className="py-6 text-gray-700">{data.note.body}</p>
+          <div
+            className="py-6 text-gray-700"
+            dangerouslySetInnerHTML={{ __html: data.note.body }}
+          />
           <hr className="my-4" />
           <div className="space-y-4">
             <Form method="post" onSubmit={(e) => {
