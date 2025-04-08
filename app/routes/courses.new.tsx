@@ -3,8 +3,11 @@ import { json, redirect } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { requireUserId } from "~/session.server";
 import { createCourse } from "~/models/course.server";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+
+const ReactQuill = typeof window !== "undefined" ? require("react-quill") : () => null;
+import "react-quill/dist/quill.snow.css";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await requireUserId(request);
@@ -43,7 +46,9 @@ type CourseItem = {
   id: string;
   content: string;
   type: 'topic' | 'lesson' | 'quiz';
-  questions?: { question: string; answer: string }[]; // For quizzes
+  description?: string;
+  lessonContent?: string;
+  questions?: { question: string; answer: string }[];
 };
 
 export default function NewCoursePage() {
@@ -53,21 +58,28 @@ export default function NewCoursePage() {
   const [courseDescription, setCourseDescription] = useState('');
   const [courseItems, setCourseItems] = useState<CourseItem[]>([]);
   const [points, setPoints] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const addItem = (type: CourseItem['type']) => {
     const newItem: CourseItem = {
       id: `item-${Date.now()}`,
       content: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
       type,
-      ...(type === 'quiz' && { questions: [] }), // Initialize questions for quizzes
+      ...(type === 'topic' && { description: "" }),
+      ...(type === 'lesson' && { lessonContent: "" }),
+      ...(type === 'quiz' && { questions: [] }),
     };
     setCourseItems([...courseItems, newItem]);
     setPoints(points + 10);
   };
 
-  const updateItemContent = (id: string, content: string) => {
+  const updateItemContent = (id: string, field: 'content' | 'description' | 'lessonContent', value: string) => {
     setCourseItems(courseItems.map(item => 
-      item.id === id ? { ...item, content } : item
+      item.id === id ? { ...item, [field]: value } : item
     ));
   };
 
@@ -189,8 +201,9 @@ export default function NewCoursePage() {
                             <input
                               type="text"
                               value={item.content}
-                              onChange={(e) => updateItemContent(item.id, e.target.value)}
+                              onChange={(e) => updateItemContent(item.id, 'content', e.target.value)}
                               className="flex-1 mr-2 rounded-md border-gray-300 shadow-sm p-2"
+                              placeholder={`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Title`}
                             />
                             <button
                               type="button"
@@ -200,6 +213,32 @@ export default function NewCoursePage() {
                               Remove
                             </button>
                           </div>
+                          {item.type === 'topic' && (
+                            <textarea
+                              value={item.description || ""}
+                              onChange={(e) => updateItemContent(item.id, 'description', e.target.value)}
+                              className="w-full rounded-md border-gray-300 shadow-sm p-2"
+                              placeholder="Topic Description"
+                              rows={3}
+                            />
+                          )}
+                          {item.type === 'lesson' && isClient && (
+                            <ReactQuill
+                              value={item.lessonContent || ""}
+                              onChange={(value: string) => updateItemContent(item.id, 'lessonContent', value)} // Explicitly typed
+                              theme="snow"
+                              className="w-full rounded-md border-2 border-gray-300"
+                              modules={{
+                                toolbar: [
+                                  [{ header: [1, 2, false] }],
+                                  ["bold", "italic", "underline"],
+                                  [{ list: "ordered" }, { list: "bullet" }],
+                                  ["link"],
+                                  ["clean"],
+                                ],
+                              }}
+                            />
+                          )}
                           {item.type === 'quiz' && (
                             <div className="ml-4 space-y-2">
                               {item.questions?.map((q, qIdx) => (

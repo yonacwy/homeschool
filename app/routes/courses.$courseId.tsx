@@ -3,7 +3,10 @@ import { json, redirect } from "@remix-run/node";
 import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
 import { requireUserId } from "~/session.server";
 import { getCourse, updateCourse, deleteCourse } from "~/models/course.server";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const ReactQuill = typeof window !== "undefined" ? require("react-quill") : () => null;
+import "react-quill/dist/quill.snow.css";
 
 export const loader = async ({ params, request }: LoaderFunctionArgs) => {
   const userId = await requireUserId(request);
@@ -42,7 +45,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
         id: params.courseId,
         title,
         description: description || "",
-        structure, // Now valid with updated type
+        structure,
         userId,
       });
       return redirect(`/courses/${params.courseId}`);
@@ -67,6 +70,8 @@ type CourseItem = {
   id: string;
   content: string;
   type: 'topic' | 'lesson' | 'quiz';
+  description?: string;
+  lessonContent?: string;
   questions?: { question: string; answer: string }[];
 };
 
@@ -80,10 +85,15 @@ export default function CoursePage() {
   );
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description || "");
+  const [isClient, setIsClient] = useState(false);
 
-  const updateItemContent = (id: string, content: string) => {
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const updateItemContent = (id: string, field: 'content' | 'description' | 'lessonContent', value: string) => {
     setCourseItems(courseItems.map(item => 
-      item.id === id ? { ...item, content } : item
+      item.id === id ? { ...item, [field]: value } : item
     ));
   };
 
@@ -149,13 +159,40 @@ export default function CoursePage() {
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">Course Structure</h2>
             {courseItems.map((item) => (
-              <div key={item.id} className="p-4 bg-gray-200 rounded shadow-md mb-2">
+              <div key={item.id} className="p-4 bg-gray-200 rounded shadow-md mb-2 space-y-2">
                 <input
                   type="text"
                   value={item.content}
-                  onChange={(e) => updateItemContent(item.id, e.target.value)}
+                  onChange={(e) => updateItemContent(item.id, 'content', e.target.value)}
                   className="w-full rounded-md border-gray-300 shadow-sm p-2 mb-2"
+                  placeholder={`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} Title`}
                 />
+                {item.type === 'topic' && (
+                  <textarea
+                    value={item.description || ""}
+                    onChange={(e) => updateItemContent(item.id, 'description', e.target.value)}
+                    className="w-full rounded-md border-gray-300 shadow-sm p-2"
+                    placeholder="Topic Description"
+                    rows={3}
+                  />
+                )}
+                {item.type === 'lesson' && isClient && (
+                  <ReactQuill
+                    value={item.lessonContent || ""}
+                    onChange={(value: string) => updateItemContent(item.id, 'lessonContent', value)} // Explicitly typed
+                    theme="snow"
+                    className="w-full rounded-md border-2 border-gray-300"
+                    modules={{
+                      toolbar: [
+                        [{ header: [1, 2, false] }],
+                        ["bold", "italic", "underline"],
+                        [{ list: "ordered" }, { list: "bullet" }],
+                        ["link"],
+                        ["clean"],
+                      ],
+                    }}
+                  />
+                )}
                 {item.type === 'quiz' && (
                   <div className="ml-4 space-y-2">
                     {item.questions?.map((q, qIdx) => (
@@ -224,6 +261,15 @@ export default function CoursePage() {
             courseItems.map((item) => (
               <div key={item.id} className="mb-4">
                 <h3 className="text-lg font-medium text-gray-800">{item.content} ({item.type})</h3>
+                {item.type === 'topic' && item.description && (
+                  <p className="text-gray-600 ml-4">{item.description}</p>
+                )}
+                {item.type === 'lesson' && item.lessonContent && (
+                  <div
+                    className="text-gray-600 ml-4"
+                    dangerouslySetInnerHTML={{ __html: item.lessonContent }}
+                  />
+                )}
                 {item.type === 'quiz' && item.questions && (
                   <ul className="ml-4 list-disc">
                     {item.questions.map((q, qIdx) => (
